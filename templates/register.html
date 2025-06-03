@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Register - Kotak Conference{% endblock %}
+{% block content %}
+<h2 class="mb-4 text-center">Register as Guest</h2>
+{% if message %}
+    <div class="alert alert-info text-center">{{ message }}</div>
+{% endif %}
+<form method="post" action="/register" autocomplete="off">
+    <div class="mb-3">
+        <label for="name" class="form-label">Name*</label>
+        <input type="text" class="form-control" id="name" name="name" required maxlength="50">
+    </div>
+    <div class="mb-3">
+        <label for="phone" class="form-label">Phone*</label>
+        <input type="tel" class="form-control" id="phone" name="phone" required pattern="[0-9]{10}">
+        <div class="form-text">Enter 10-digit mobile number</div>
+    </div>
+    <div class="mb-3">
+        <label for="address" class="form-label">Address*</label>
+        <input type="text" class="form-control" id="address" name="address" required maxlength="120">
+    </div>
+    <div class="mb-3">
+        <label for="profession" class="form-label">Profession</label>
+        <input type="text" class="form-control" id="profession" name="profession" maxlength="50">
+    </div>
+    <div class="mb-3">
+        <label for="notes" class="form-label">Notes</label>
+        <textarea class="form-control" id="notes" name="notes" maxlength="200"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Register</button>
+</form>
+{% endblock %}

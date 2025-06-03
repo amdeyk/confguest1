@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Welcome - Kotak Conference{% endblock %}
+
+{% block head %}
+<script src="/static/html5-qrcode.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-3">Welcome to the Conference</h2>
+<form method="post" action="/welcome" id="welcome-form" autocomplete="off">
+    <div class="mb-3">
+        <label for="lookup" class="form-label">Enter Phone, Guest ID, or Scan QR</label>
+        <input type="text" class="form-control" id="lookup" name="lookup" required autofocus>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 mb-2">Enter</button>
+    <button type="button" class="btn btn-success w-100 mb-2" id="scan-btn" type="button">Scan QR Code</button>
+</form>
+
+<!-- QR Scanner Area (hidden by default) -->
+<div id="qr-reader" style="width:320px;max-width:100%;margin:auto;display:none;"></div>
+
+<!-- Instructions Modal -->
+<div class="modal fade" id="scanHelpModal" tabindex="-1" aria-labelledby="scanHelpLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="scanHelpLabel">How to Scan QR Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul>
+          <li>Tap <b>Scan QR Code</b> and allow camera access when prompted.</li>
+          <li>Point your camera steadily at the badge QR code.</li>
+          <li>On successful scan, your entry will be auto-checked-in instantly.</li>
+          <li>Each guest can enter once. To add a <b>Plus One</b>, see the option after check-in.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Plus One Modal (shows after check-in, optional) -->
+<div class="modal fade" id="plusOneModal" tabindex="-1" aria-labelledby="plusOneModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="plusOneModalLabel">Add Plus One</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <form method="post" action="/add_plus_one">
+            <input type="hidden" name="lookup" value="{{ guest.id if guest }}">
+            <button type="submit" class="btn btn-warning">Confirm Add Plus One</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if guest %}
+    <div class="alert alert-success mt-3 text-center">
+        <b>Welcome, {{ guest.name }}!</b><br>
+        Profession: {{ guest.profession or 'N/A' }}<br>
+        ID: {{ guest.id }}<br>
+        <span class="badge bg-success mt-2">Checked In</span>
+        {% if already_checked_in %}
+            <div class="text-info mt-2">Already checked in!</div>
+        {% endif %}
+        {% if guest.plus_one == "no" %}
+            <!-- Show Plus One button as inline or modal trigger -->
+            <button type="button" class="btn btn-warning mt-3" onclick="showPlusOneModal();">Add Plus One</button>
+        {% else %}
+            <div class="text-info mt-2">Plus One Already Added</div>
+        {% endif %}
+    </div>
+{% elif error %}
+    <div class="alert alert-danger mt-3 text-center">{{ error }}</div>
+{% endif %}
+
+<div class="text-center mt-4">
+    <a href="#" id="scan-help-link" class="small text-decoration-underline">How to use QR Scan?</a>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function showScanHelp() {
+    var modal = new bootstrap.Modal(document.getElementById('scanHelpModal'));
+    modal.show();
+}
+function showPlusOneModal() {
+    var modal = new bootstrap.Modal(document.getElementById('plusOneModal'));
+    modal.show();
+}
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("scan-help-link").onclick = function(e) {
+        e.preventDefault();
+        showScanHelp();
+    };
+    let qrReaderObj = null;
+    document.getElementById('scan-btn').onclick = function() {
+        document.getElementById('qr-reader').style.display = '';
+        if (qrReaderObj) {
+            qrReaderObj.stop().then(() => startQrScanner());
+        } else {
+            startQrScanner();
+        }
+    };
+    function startQrScanner() {
+        qrReaderObj = new Html5Qrcode("qr-reader");
+        qrReaderObj.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            qrCodeMessage => {
+                document.getElementById('lookup').value = qrCodeMessage;
+                qrReaderObj.stop().then(() => {
+                    document.getElementById('qr-reader').style.display = 'none';
+                    document.getElementById('welcome-form').submit();
+                });
+            },
+            errorMessage => {}
+        );
+    }
+    // Optionally show the plus one modal automatically after check-in:
+    {% if guest and guest.plus_one == "no" and not error %}
+        showPlusOneModal();
+    {% endif %}
+});
+</script>
+{% endblock %}

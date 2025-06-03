@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Download Guest QR - Kotak Conference{% endblock %}
+{% block content %}
+<h2 class="text-center mb-4">Download Your Conference QR Badge</h2>
+<form method="post" action="/download_qr" class="mb-3">
+    <label for="identifier" class="form-label">Enter Phone or Guest ID</label>
+    <input type="text" class="form-control mb-2" id="identifier" name="identifier" required>
+    <button type="submit" class="btn btn-success w-100">Get QR Badge</button>
+</form>
+{% if qr_image and guest %}
+    <div class="card shadow-sm mx-auto" style="max-width:330px;">
+        <div class="card-header text-white bg-danger text-center py-2" style="font-size:1.15em;">
+            Welcome to the Kotak Conference
+        </div>
+        <div class="card-body text-center">
+            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="img-fluid mb-3" style="max-width:150px;">
+            <div class="fw-bold fs-5">{{ guest.name }}</div>
+            <div class="text-muted small">ID: {{ guest.id }}</div>
+            <div class="text-muted small">Phone: {{ guest.phone }}</div>
+            <a href="data:image/png;base64,{{ qr_image }}" download="badge_{{ guest.id }}.png" class="btn btn-outline-primary mt-3 w-100">Download Badge</a>
+        </div>
+    </div>
+{% elif error %}
+    <div class="alert alert-danger mt-3">{{ error }}</div>
+{% endif %}
+{% endblock %}

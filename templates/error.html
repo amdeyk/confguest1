@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error - Kotak Conference{% endblock %}
+{% block content %}
+<div class="alert alert-danger text-center my-5">
+    <h3>Error</h3>
+    <p>{{ message or "Something went wrong." }}</p>
+    <a href="/" class="btn btn-secondary mt-3">Back to Home</a>
+</div>
+{% endblock %}

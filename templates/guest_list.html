@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Guests List - Kotak Conference{% endblock %}
+{% block content %}
+<h2>All Guests</h2>
+<div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+    <span class="badge bg-info text-dark">Total: {{ stats.total }}</span>
+    <span class="badge bg-success">Checked In: {{ stats.checked_in }}</span>
+    <span class="badge bg-danger">Not Checked In: {{ stats.not_checked_in }}</span>
+    <span class="badge bg-warning text-dark">Plus Ones: {{ stats.plus_ones }}</span>
+    <a href="/guest_list.csv" class="btn btn-outline-primary btn-sm ms-auto">Download CSV</a>
+</div>
+<div class="table-responsive mb-4">
+    <table class="table table-bordered table-striped align-middle w-100" style="min-width: 700px;">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Profession</th>
+                <th>Status</th>
+                <th>Plus One</th>
+                <th>Registered At</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for guest in guests %}
+            <tr>
+                <td>{{ guest.id }}</td>
+                <td>{{ guest.name }}</td>
+                <td>{{ guest.phone }}</td>
+                <td>{{ guest.profession or '' }}</td>
+                <td>
+                    {% if guest.added == "yes" %}
+                        <span class="badge bg-success badge-status">Checked In</span>
+                    {% else %}
+                        <span class="badge bg-secondary badge-status">Not Checked In</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if guest.plus_one == "yes" %}
+                        <span class="badge bg-warning text-dark">Added</span>
+                    {% else %}
+                        <span class="badge bg-secondary">No</span>
+                    {% endif %}
+                </td>
+                <td>{{ guest.created }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
