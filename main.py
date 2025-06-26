@@ -116,67 +116,120 @@ def qr_b64(data):
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 def create_conference_badge(guest_data):
-    """Create a stylized conference badge image encoded in base64"""
+    """Create a beautiful conference badge matching the reference design."""
+    # Badge dimensions
     width, height = 600, 800
+
+    # Base image
     img = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(img)
 
-    kotak_red = (194, 12, 44)
-    dark_gray = (64, 64, 64)
-    light_gray = (128, 128, 128)
+    # Colors
+    success_green = (34, 197, 94)
+    dark_text = (31, 41, 55)
+    light_gray = (107, 114, 128)
+    blue_accent = (59, 130, 246)
 
-    header_height = 120
-    draw.rectangle([0, 0, width, header_height], fill=kotak_red)
-
+    # Fonts
     try:
-        title_font = ImageFont.truetype("arial.ttf", 32)
-        subtitle_font = ImageFont.truetype("arial.ttf", 20)
-        name_font = ImageFont.truetype("arial.ttf", 48)
-        detail_font = ImageFont.truetype("arial.ttf", 24)
-        small_font = ImageFont.truetype("arial.ttf", 18)
+        header_font = ImageFont.truetype("arial.ttf", 28)
+        title_font = ImageFont.truetype("arial.ttf", 24)
+        name_font = ImageFont.truetype("arial.ttf", 42)
+        detail_font = ImageFont.truetype("arial.ttf", 20)
+        small_font = ImageFont.truetype("arial.ttf", 16)
+        tiny_font = ImageFont.truetype("arial.ttf", 14)
     except Exception:
+        header_font = ImageFont.load_default()
         title_font = ImageFont.load_default()
-        subtitle_font = ImageFont.load_default()
         name_font = ImageFont.load_default()
         detail_font = ImageFont.load_default()
         small_font = ImageFont.load_default()
+        tiny_font = ImageFont.load_default()
 
-    draw.text((width // 2, 30), "KOTAK CONFERENCE", font=title_font, fill="white", anchor="mt")
-    draw.text((width // 2, 70), "BADGE", font=subtitle_font, fill="white", anchor="mt")
+    # Header
+    header_height = 80
+    draw.rectangle([0, 0, width, header_height], fill=success_green)
+    draw.text((width // 2, 25), "🎫 Your Conference Badge", font=header_font, fill="white", anchor="mt")
 
-    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=2)
+    content_start_y = header_height + 40
+
+    # QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=6,
+        border=2,
+    )
     qr.add_data(guest_data["id"])
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white")
-    qr_size = 200
+
+    qr_size = 180
     qr_img = qr_img.resize((qr_size, qr_size))
     qr_x = (width - qr_size) // 2
-    qr_y = header_height + 40
+    qr_y = content_start_y
+
+    border_padding = 8
+    draw.rectangle(
+        [qr_x - border_padding, qr_y - border_padding, qr_x + qr_size + border_padding, qr_y + qr_size + border_padding],
+        outline=(220, 220, 220),
+        width=2,
+    )
     img.paste(qr_img, (qr_x, qr_y))
 
-    name_y = qr_y + qr_size + 40
-    draw.text((width // 2, name_y), guest_data["name"], font=name_font, fill=dark_gray, anchor="mt")
+    # Name
+    name_y = qr_y + qr_size + 50
+    draw.text((width // 2, name_y), guest_data["name"], font=name_font, fill=success_green, anchor="mt")
 
-    details_y = name_y + 80
-    draw.text((width // 2, details_y), f"ID: {guest_data['id']}", font=detail_font, fill=light_gray, anchor="mt")
-    draw.text((width // 2, details_y + 40), f"Phone: {guest_data['phone']}", font=detail_font, fill=light_gray, anchor="mt")
+    # Details
+    details_start_y = name_y + 60
+    draw.text((width // 2, details_start_y), f"ID: {guest_data['id']}", font=detail_font, fill=light_gray, anchor="mt")
+    draw.text((width // 2, details_start_y + 35), f"Phone: {guest_data['phone']}", font=detail_font, fill=light_gray, anchor="mt")
 
-    if guest_data.get("profession"):
-        prof_y = details_y + 100
+    # Profession badge
+    if guest_data.get("profession") and guest_data["profession"].strip():
+        prof_y = details_start_y + 90
         prof_text = guest_data["profession"]
         prof_bbox = draw.textbbox((0, 0), prof_text, font=small_font)
-        prof_width = prof_bbox[2] - prof_bbox[0] + 20
-        prof_height = prof_bbox[3] - prof_bbox[1] + 10
+        prof_width = prof_bbox[2] - prof_bbox[0] + 30
+        prof_height = prof_bbox[3] - prof_bbox[1] + 16
         prof_x = (width - prof_width) // 2
-        draw.rounded_rectangle([prof_x, prof_y, prof_x + prof_width, prof_y + prof_height], radius=15, fill=(59, 130, 246))
+        draw.rounded_rectangle(
+            [prof_x, prof_y, prof_x + prof_width, prof_y + prof_height],
+            radius=prof_height // 2,
+            fill=blue_accent,
+        )
         draw.text((width // 2, prof_y + prof_height // 2), prof_text, font=small_font, fill="white", anchor="mm")
 
-    footer_y = height - 60
-    draw.text((width // 2, footer_y), "Present this badge at registration", font=small_font, fill=light_gray, anchor="mt")
-    draw.text((width // 2, footer_y + 25), "Kotak Conference 2025", font=small_font, fill=light_gray, anchor="mt")
+    # Action buttons
+    buttons_y = height - 180
+    button_width = width - 80
+    button_height = 50
+    button_x = (width - button_width) // 2
+
+    download_y = buttons_y
+    draw.rounded_rectangle(
+        [button_x, download_y, button_x + button_width, download_y + button_height],
+        radius=12,
+        fill=blue_accent,
+    )
+    draw.text((width // 2, download_y + button_height // 2), "📱 Download Badge", font=title_font, fill="white", anchor="mm")
+
+    print_y = download_y + button_height + 15
+    draw.rounded_rectangle(
+        [button_x, print_y, button_x + button_width, print_y + button_height],
+        radius=12,
+        outline=light_gray,
+        width=2,
+        fill="white",
+    )
+    draw.text((width // 2, print_y + button_height // 2), "🖨️ Print Badge", font=title_font, fill=light_gray, anchor="mm")
+
+    footer_y = height - 40
+    draw.text((width // 2, footer_y), "Kotak Conference 2025", font=tiny_font, fill=light_gray, anchor="mm")
 
     buf = BytesIO()
-    img.save(buf, format="PNG", quality=95)
+    img.save(buf, format="PNG", quality=95, optimize=True)
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 def mark_checked_in(id_or_phone):
