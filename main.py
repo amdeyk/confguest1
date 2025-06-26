@@ -224,109 +224,177 @@ def download_qr_submit(request: Request, identifier: str = Form(...)):
     return templates.TemplateResponse("download_qr.html", {"request": request, "qr_image": qr_image, "guest": g, "error": None, "year": datetime.now().year})
 
 # ---- 3. Welcome Page (Admin Protected) ----
-@app.get("/welcome", response_class=HTMLResponse)
+@app.get("/welcome")
 def welcome_form(request: Request, kotak_admin_session: str = Cookie(None)):
-    if not check_admin_auth(kotak_admin_session):
-        return RedirectResponse("/admin")
-    return templates.TemplateResponse("welcome.html", {"request": request, "guest": None, "error": None, "already_checked_in": False, "year": datetime.now().year})
-
-@app.post("/welcome", response_class=HTMLResponse)
-def welcome_submit(request: Request, lookup: str = Form(...), kotak_admin_session: str = Cookie(None)):
-    if not check_admin_auth(kotak_admin_session):
-        return RedirectResponse("/admin")
-    
-    uid = str(uuid.uuid4())
-    log_with_uid(uid, f"START Welcome Submit: lookup={lookup}")
-    g = guest_lookup(lookup)
-    if not g:
-        log_with_uid(uid, f"FAILED Welcome: Guest not found for lookup={lookup}")
-        return templates.TemplateResponse("welcome.html", {"request": request, "guest": None, "error": "Guest not found.", "already_checked_in": False, "year": datetime.now().year})
-
-    if g["added"] == "yes":
-        log_with_uid(uid, f"WELCOME: Already checked in: id={g['id']}, phone={g['phone']}")
+    try:
+        if not check_admin_auth(kotak_admin_session):
+            return RedirectResponse("/admin")
         return templates.TemplateResponse(
             "welcome.html",
             {
                 "request": request,
-                "guest": g,
-                "error": None,
-                "already_checked_in": True,
-                "year": datetime.now().year
-            }
-        )
-    else:
-        mark_checked_in(g["id"])
-        log_with_uid(uid, f"SUCCESS Check-in: id={g['id']} name={g['name']}")
-        g = guest_lookup(g["id"])
-        return templates.TemplateResponse(
-            "welcome.html",
-            {
-                "request": request,
-                "guest": g,
+                "guest": None,
                 "error": None,
                 "already_checked_in": False,
-                "year": datetime.now().year
-            }
+                "year": datetime.now().year,
+            },
         )
+    except Exception as e:
+        logging.error(f"Error in welcome_form: {e}")
+        return RedirectResponse("/admin")
+
+@app.post("/welcome")
+def welcome_submit(request: Request, lookup: str = Form(...), kotak_admin_session: str = Cookie(None)):
+    try:
+        if not check_admin_auth(kotak_admin_session):
+            return RedirectResponse("/admin")
+
+        uid = str(uuid.uuid4())
+        log_with_uid(uid, f"START Welcome Submit: lookup={lookup}")
+        g = guest_lookup(lookup)
+        if not g:
+            log_with_uid(uid, f"FAILED Welcome: Guest not found for lookup={lookup}")
+            return templates.TemplateResponse(
+                "welcome.html",
+                {
+                    "request": request,
+                    "guest": None,
+                    "error": "Guest not found.",
+                    "already_checked_in": False,
+                    "year": datetime.now().year,
+                },
+            )
+
+        if g["added"] == "yes":
+            log_with_uid(uid, f"WELCOME: Already checked in: id={g['id']}, phone={g['phone']}")
+            return templates.TemplateResponse(
+                "welcome.html",
+                {
+                    "request": request,
+                    "guest": g,
+                    "error": None,
+                    "already_checked_in": True,
+                    "year": datetime.now().year,
+                },
+            )
+        else:
+            mark_checked_in(g["id"])
+            log_with_uid(uid, f"SUCCESS Check-in: id={g['id']} name={g['name']}")
+            g = guest_lookup(g["id"])
+            return templates.TemplateResponse(
+                "welcome.html",
+                {
+                    "request": request,
+                    "guest": g,
+                    "error": None,
+                    "already_checked_in": False,
+                    "year": datetime.now().year,
+                },
+            )
+    except Exception as e:
+        logging.error(f"Error in welcome_submit: {e}")
+        return RedirectResponse("/admin")
 
 # ---- 4. Add Plus One (Admin Protected) ----
-@app.post("/add_plus_one", response_class=HTMLResponse)
+@app.post("/add_plus_one")
 def add_plus_one(request: Request, lookup: str = Form(...), kotak_admin_session: str = Cookie(None)):
-    if not check_admin_auth(kotak_admin_session):
+    try:
+        if not check_admin_auth(kotak_admin_session):
+            return RedirectResponse("/admin")
+
+        uid = str(uuid.uuid4())
+        log_with_uid(uid, f"START Add Plus One: lookup={lookup}")
+        guests = lock_and_read()
+        found = False
+        updated = False
+        for g in guests:
+            if g["id"] == lookup:
+                if g["added"] == "yes" and g["plus_one"] == "no":
+                    g["plus_one"] = "yes"
+                    found = True
+                    updated = True
+                    log_with_uid(uid, f"SUCCESS Plus One Added: id={g['id']}")
+                elif g["plus_one"] == "yes":
+                    found = True
+                    log_with_uid(uid, f"IGNORED Plus One: Already added id={g['id']}")
+        if updated:
+            lock_and_write(guests)
+        if found:
+            guest = guest_lookup(lookup)
+            return templates.TemplateResponse(
+                "welcome.html",
+                {
+                    "request": request,
+                    "guest": guest,
+                    "error": None,
+                    "already_checked_in": True,
+                    "year": datetime.now().year,
+                },
+            )
+        else:
+            log_with_uid(uid, f"FAILED Plus One: Not eligible id/lookup={lookup}")
+            return templates.TemplateResponse(
+                "welcome.html",
+                {
+                    "request": request,
+                    "guest": None,
+                    "error": "Guest not found, not checked in, or plus one already added.",
+                    "already_checked_in": False,
+                    "year": datetime.now().year,
+                },
+            )
+    except Exception as e:
+        logging.error(f"Error in add_plus_one: {e}")
         return RedirectResponse("/admin")
-    
-    uid = str(uuid.uuid4())
-    log_with_uid(uid, f"START Add Plus One: lookup={lookup}")
-    guests = lock_and_read()
-    found = False
-    updated = False
-    for g in guests:
-        if g["id"] == lookup:
-            if g["added"] == "yes" and g["plus_one"] == "no":
-                g["plus_one"] = "yes"
-                found = True
-                updated = True
-                log_with_uid(uid, f"SUCCESS Plus One Added: id={g['id']}")
-            elif g["plus_one"] == "yes":
-                found = True
-                log_with_uid(uid, f"IGNORED Plus One: Already added id={g['id']}")
-    if updated:
-        lock_and_write(guests)
-    if found:
-        guest = guest_lookup(lookup)
-        return templates.TemplateResponse("welcome.html", {"request": request, "guest": guest, "error": None, "already_checked_in": True, "year": datetime.now().year})
-    else:
-        log_with_uid(uid, f"FAILED Plus One: Not eligible id/lookup={lookup}")
-        return templates.TemplateResponse("welcome.html", {"request": request, "guest": None, "error": "Guest not found, not checked in, or plus one already added.", "already_checked_in": False, "year": datetime.now().year})
 
 # ---- 5. Guest List / Dashboard (Admin Protected) ----
-@app.get("/guest_list", response_class=HTMLResponse)
+@app.get("/guest_list")
 def guest_list(request: Request, kotak_admin_session: str = Cookie(None)):
-    if not check_admin_auth(kotak_admin_session):
+    try:
+        if not check_admin_auth(kotak_admin_session):
+            return RedirectResponse("/admin")
+
+        guests = lock_and_read()
+        stats = get_dashboard_stats(guests)
+        return templates.TemplateResponse(
+            "guest_list.html",
+            {
+                "request": request,
+                "guests": guests,
+                "stats": stats,
+                "year": datetime.now().year,
+            },
+        )
+    except Exception as e:
+        logging.error(f"Error in guest_list: {e}")
         return RedirectResponse("/admin")
-    
-    guests = lock_and_read()
-    stats = get_dashboard_stats(guests)
-    return templates.TemplateResponse("guest_list.html", {"request": request, "guests": guests, "stats": stats, "year": datetime.now().year})
 
 @app.get("/guest_list.csv")
 def guest_list_csv(kotak_admin_session: str = Cookie(None)):
-    if not check_admin_auth(kotak_admin_session):
-        raise HTTPException(status_code=403, detail="Admin authentication required")
-    
-    if not os.path.exists(CSV_PATH):
-        return Response("No guests registered yet.", media_type="text/plain")
-    backup_csv()
-    return FileResponse(CSV_PATH, filename="guest_list.csv")
+    try:
+        if not check_admin_auth(kotak_admin_session):
+            raise HTTPException(status_code=403, detail="Admin authentication required")
+
+        if not os.path.exists(CSV_PATH):
+            return Response("No guests registered yet.", media_type="text/plain")
+        backup_csv()
+        return FileResponse(CSV_PATH, filename="guest_list.csv")
+    except Exception as e:
+        logging.error(f"Error in guest_list_csv: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # ---- 6. Serve QR as Image (optional) ----
 @app.get("/qr/{gid}")
 def qr_direct(gid: str):
-    buf = BytesIO()
-    img = qrcode.make(gid)
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return Response(content=buf.read(), media_type="image/png")
+    try:
+        buf = BytesIO()
+        img = qrcode.make(gid)
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return Response(content=buf.read(), media_type="image/png")
+    except Exception as e:
+        logging.error(f"Error in qr_direct: {e}")
+        raise HTTPException(status_code=500, detail="Error generating QR code")
 
 # Custom exception handler for 403 errors
 @app.exception_handler(403)
@@ -335,7 +403,10 @@ async def forbidden_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def custom_exception_handler(request: Request, exc: Exception):
-    logging.error(f"Error: {exc}")
-    return Response("An unexpected error occurred.", status_code=500)
+    logging.error(f"Global Error: {exc}")
+    return templates.TemplateResponse(
+        "error.html",
+        {"request": request, "message": "An unexpected error occurred.", "year": datetime.now().year},
+    )
 
 # === End of File ===
