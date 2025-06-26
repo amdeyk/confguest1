@@ -116,117 +116,113 @@ def qr_b64(data):
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 def create_conference_badge(guest_data):
-    """Create a beautiful conference badge matching the reference design."""
-    # Badge dimensions
-    width, height = 600, 800
+    """Create a beautiful, properly sized conference badge"""
+    # Badge dimensions - optimized for readability
+    width, height = 600, 850
 
-    # Base image
+    # Create new image with white background
     img = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(img)
 
-    # Colors
-    success_green = (34, 197, 94)
+    # Professional color scheme
+    kotak_green = (34, 197, 94)
     dark_text = (31, 41, 55)
-    light_gray = (107, 114, 128)
+    medium_gray = (75, 85, 99)
+    light_gray = (156, 163, 175)
     blue_accent = (59, 130, 246)
 
-    # Fonts
+    # Load fonts with proper sizing
     try:
-        header_font = ImageFont.truetype("arial.ttf", 28)
-        title_font = ImageFont.truetype("arial.ttf", 24)
-        name_font = ImageFont.truetype("arial.ttf", 42)
-        detail_font = ImageFont.truetype("arial.ttf", 20)
-        small_font = ImageFont.truetype("arial.ttf", 16)
-        tiny_font = ImageFont.truetype("arial.ttf", 14)
+        # Much larger fonts for better readability
+        header_font = ImageFont.truetype("arial.ttf", 36)
+        name_font = ImageFont.truetype("arial.ttf", 56)
+        detail_font = ImageFont.truetype("arial.ttf", 28)
+        prof_font = ImageFont.truetype("arial.ttf", 24)
+        footer_font = ImageFont.truetype("arial.ttf", 20)
     except Exception:
+        # Fallback fonts
         header_font = ImageFont.load_default()
-        title_font = ImageFont.load_default()
         name_font = ImageFont.load_default()
         detail_font = ImageFont.load_default()
-        small_font = ImageFont.load_default()
-        tiny_font = ImageFont.load_default()
+        prof_font = ImageFont.load_default()
+        footer_font = ImageFont.load_default()
 
-    # Header
-    header_height = 80
-    draw.rectangle([0, 0, width, header_height], fill=success_green)
-    draw.text((width // 2, 25), "🎫 Your Conference Badge", font=header_font, fill="white", anchor="mt")
+    # Header section - larger and more prominent
+    header_height = 100
+    draw.rectangle([0, 0, width, header_height], fill=kotak_green)
 
-    content_start_y = header_height + 40
+    # Header text - bigger and clearer
+    draw.text((width // 2, header_height // 2), "🎫 KOTAK CONFERENCE BADGE",
+              font=header_font, fill="white", anchor="mm")
 
-    # QR code
+    # Content area starts after header
+    content_y = header_height + 60
+
+    # QR Code - larger and more prominent
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=6,
-        border=2,
+        box_size=8,
+        border=3,
     )
     qr.add_data(guest_data["id"])
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white")
 
-    qr_size = 180
+    # Much larger QR code
+    qr_size = 220
     qr_img = qr_img.resize((qr_size, qr_size))
-    qr_x = (width - qr_size) // 2
-    qr_y = content_start_y
 
-    border_padding = 8
-    draw.rectangle(
-        [qr_x - border_padding, qr_y - border_padding, qr_x + qr_size + border_padding, qr_y + qr_size + border_padding],
-        outline=(220, 220, 220),
-        width=2,
-    )
+    # Center QR code with nice border
+    qr_x = (width - qr_size) // 2
+    qr_y = content_y
+
+    # Elegant border around QR
+    border_size = 15
+    draw.rectangle([qr_x - border_size, qr_y - border_size,
+                   qr_x + qr_size + border_size, qr_y + qr_size + border_size],
+                   fill=(248, 250, 252), outline=(229, 231, 235), width=3)
+
     img.paste(qr_img, (qr_x, qr_y))
 
-    # Name
-    name_y = qr_y + qr_size + 50
-    draw.text((width // 2, name_y), guest_data["name"], font=name_font, fill=success_green, anchor="mt")
+    # Guest name - much larger and more prominent
+    name_y = qr_y + qr_size + 60
+    draw.text((width // 2, name_y), guest_data["name"],
+              font=name_font, fill=kotak_green, anchor="mt")
 
-    # Details
-    details_start_y = name_y + 60
-    draw.text((width // 2, details_start_y), f"ID: {guest_data['id']}", font=detail_font, fill=light_gray, anchor="mt")
-    draw.text((width // 2, details_start_y + 35), f"Phone: {guest_data['phone']}", font=detail_font, fill=light_gray, anchor="mt")
+    # Guest details with better spacing
+    details_y = name_y + 80
 
-    # Profession badge
+    # ID with better formatting
+    draw.text((width // 2, details_y), f"ID: {guest_data['id']}",
+              font=detail_font, fill=medium_gray, anchor="mt")
+
+    # Phone with better spacing
+    draw.text((width // 2, details_y + 45), f"Phone: {guest_data['phone']}",
+              font=detail_font, fill=medium_gray, anchor="mt")
+
+    # Profession badge - bigger and more readable
     if guest_data.get("profession") and guest_data["profession"].strip():
-        prof_y = details_start_y + 90
+        prof_y = details_y + 110
         prof_text = guest_data["profession"]
-        prof_bbox = draw.textbbox((0, 0), prof_text, font=small_font)
-        prof_width = prof_bbox[2] - prof_bbox[0] + 30
-        prof_height = prof_bbox[3] - prof_bbox[1] + 16
+
+        # Larger profession badge
+        prof_bbox = draw.textbbox((0, 0), prof_text, font=prof_font)
+        prof_width = prof_bbox[2] - prof_bbox[0] + 40
+        prof_height = prof_bbox[3] - prof_bbox[1] + 20
         prof_x = (width - prof_width) // 2
-        draw.rounded_rectangle(
-            [prof_x, prof_y, prof_x + prof_width, prof_y + prof_height],
-            radius=prof_height // 2,
-            fill=blue_accent,
-        )
-        draw.text((width // 2, prof_y + prof_height // 2), prof_text, font=small_font, fill="white", anchor="mm")
 
-    # Action buttons
-    buttons_y = height - 180
-    button_width = width - 80
-    button_height = 50
-    button_x = (width - button_width) // 2
+        # Nice rounded badge
+        draw.rounded_rectangle([prof_x, prof_y, prof_x + prof_width, prof_y + prof_height],
+                             radius=prof_height // 2, fill=blue_accent)
 
-    download_y = buttons_y
-    draw.rounded_rectangle(
-        [button_x, download_y, button_x + button_width, download_y + button_height],
-        radius=12,
-        fill=blue_accent,
-    )
-    draw.text((width // 2, download_y + button_height // 2), "📱 Download Badge", font=title_font, fill="white", anchor="mm")
+        draw.text((width // 2, prof_y + prof_height // 2), prof_text,
+                  font=prof_font, fill="white", anchor="mm")
 
-    print_y = download_y + button_height + 15
-    draw.rounded_rectangle(
-        [button_x, print_y, button_x + button_width, print_y + button_height],
-        radius=12,
-        outline=light_gray,
-        width=2,
-        fill="white",
-    )
-    draw.text((width // 2, print_y + button_height // 2), "🖨️ Print Badge", font=title_font, fill=light_gray, anchor="mm")
-
-    footer_y = height - 40
-    draw.text((width // 2, footer_y), "Kotak Conference 2025", font=tiny_font, fill=light_gray, anchor="mm")
+    # Footer with proper spacing
+    footer_y = height - 50
+    draw.text((width // 2, footer_y), "Kotak Conference 2025 • Present at Registration",
+              font=footer_font, fill=light_gray, anchor="mm")
 
     buf = BytesIO()
     img.save(buf, format="PNG", quality=95, optimize=True)
