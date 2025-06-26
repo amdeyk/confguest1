@@ -11,6 +11,7 @@ import qrcode
 from io import BytesIO
 from filelock import FileLock
 from datetime import datetime
+from PIL import Image, ImageDraw, ImageFont
 
 # --- Static dependency auto-download, as before ---
 import urllib.request
@@ -112,6 +113,70 @@ def qr_b64(data):
     img = qrcode.make(data)
     buf = BytesIO()
     img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+def create_conference_badge(guest_data):
+    """Create a stylized conference badge image encoded in base64"""
+    width, height = 600, 800
+    img = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(img)
+
+    kotak_red = (194, 12, 44)
+    dark_gray = (64, 64, 64)
+    light_gray = (128, 128, 128)
+
+    header_height = 120
+    draw.rectangle([0, 0, width, header_height], fill=kotak_red)
+
+    try:
+        title_font = ImageFont.truetype("arial.ttf", 32)
+        subtitle_font = ImageFont.truetype("arial.ttf", 20)
+        name_font = ImageFont.truetype("arial.ttf", 48)
+        detail_font = ImageFont.truetype("arial.ttf", 24)
+        small_font = ImageFont.truetype("arial.ttf", 18)
+    except Exception:
+        title_font = ImageFont.load_default()
+        subtitle_font = ImageFont.load_default()
+        name_font = ImageFont.load_default()
+        detail_font = ImageFont.load_default()
+        small_font = ImageFont.load_default()
+
+    draw.text((width // 2, 30), "KOTAK CONFERENCE", font=title_font, fill="white", anchor="mt")
+    draw.text((width // 2, 70), "BADGE", font=subtitle_font, fill="white", anchor="mt")
+
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=2)
+    qr.add_data(guest_data["id"])
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    qr_size = 200
+    qr_img = qr_img.resize((qr_size, qr_size))
+    qr_x = (width - qr_size) // 2
+    qr_y = header_height + 40
+    img.paste(qr_img, (qr_x, qr_y))
+
+    name_y = qr_y + qr_size + 40
+    draw.text((width // 2, name_y), guest_data["name"], font=name_font, fill=dark_gray, anchor="mt")
+
+    details_y = name_y + 80
+    draw.text((width // 2, details_y), f"ID: {guest_data['id']}", font=detail_font, fill=light_gray, anchor="mt")
+    draw.text((width // 2, details_y + 40), f"Phone: {guest_data['phone']}", font=detail_font, fill=light_gray, anchor="mt")
+
+    if guest_data.get("profession"):
+        prof_y = details_y + 100
+        prof_text = guest_data["profession"]
+        prof_bbox = draw.textbbox((0, 0), prof_text, font=small_font)
+        prof_width = prof_bbox[2] - prof_bbox[0] + 20
+        prof_height = prof_bbox[3] - prof_bbox[1] + 10
+        prof_x = (width - prof_width) // 2
+        draw.rounded_rectangle([prof_x, prof_y, prof_x + prof_width, prof_y + prof_height], radius=15, fill=(59, 130, 246))
+        draw.text((width // 2, prof_y + prof_height // 2), prof_text, font=small_font, fill="white", anchor="mm")
+
+    footer_y = height - 60
+    draw.text((width // 2, footer_y), "Present this badge at registration", font=small_font, fill=light_gray, anchor="mt")
+    draw.text((width // 2, footer_y + 25), "Kotak Conference 2025", font=small_font, fill=light_gray, anchor="mt")
+
+    buf = BytesIO()
+    img.save(buf, format="PNG", quality=95)
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 def mark_checked_in(id_or_phone):
@@ -219,7 +284,7 @@ def download_qr_submit(request: Request, identifier: str = Form(...)):
     if not g:
         log_with_uid(uid, f"FAILED QR Download: Guest not found identifier={identifier}")
         return templates.TemplateResponse("download_qr.html", {"request": request, "qr_image": None, "guest": None, "error": "Guest not found.", "year": datetime.now().year})
-    qr_image = qr_b64(g["id"])
+    qr_image = create_conference_badge(g)
     log_with_uid(uid, f"SUCCESS QR Generated: id={g['id']}, phone={g['phone']}")
     return templates.TemplateResponse("download_qr.html", {"request": request, "qr_image": qr_image, "guest": g, "error": None, "year": datetime.now().year})
 

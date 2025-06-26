@@ -23,32 +23,38 @@
 
                 {% if qr_image and guest %}
                     <div class="row justify-content-center fade-in">
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <div class="card border-success">
                                 <div class="card-header bg-success text-white text-center">
-                                    <h5 class="mb-0">🎫 Your Conference Badge</h5>
+                                    <h5 class="mb-0">🎫 Your Kotak Conference Badge</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <div class="qr-badge-container">
-                                        <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px; border: 2px solid var(--neutral-200); border-radius: var(--radius-md);">
+                                    <div class="badge-container mb-4">
+                                        <img src="data:image/png;base64,{{ qr_image }}" 
+                                             alt="Kotak Conference Badge" 
+                                             class="img-fluid conference-badge" 
+                                             style="max-width: 400px; border: 2px solid var(--neutral-200); border-radius: var(--radius-md); box-shadow: var(--shadow-lg);">
                                     </div>
                                     
-                                    <div class="guest-details">
-                                        <h4 class="text-success mb-2">{{ guest.name }}</h4>
-                                        <div class="text-muted small mb-1">ID: {{ guest.id }}</div>
-                                        <div class="text-muted small mb-3">Phone: {{ guest.phone }}</div>
-                                        {% if guest.profession %}
-                                            <div class="badge bg-info text-dark mb-3">{{ guest.profession }}</div>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    <div class="d-grid gap-2">
-                                        <a href="data:image/png;base64,{{ qr_image }}" download="kotak_badge_{{ guest.id }}.png" class="btn btn-primary">
-                                            📱 Download Badge
+                                    <div class="d-grid gap-3">
+                                        <a href="data:image/png;base64,{{ qr_image }}" 
+                                           download="Kotak_Conference_Badge_{{ guest.id }}.png" 
+                                           class="btn btn-primary btn-lg">
+                                            📱 Download Conference Badge
                                         </a>
                                         <button onclick="window.print()" class="btn btn-outline-secondary">
                                             🖨️ Print Badge
                                         </button>
+                                        <button onclick="shareBadge()" class="btn btn-outline-info">
+                                            📤 Share Badge
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="mt-4 p-3 bg-light rounded">
+                                        <small class="text-muted">
+                                            <strong>✨ Your personalized Kotak Conference badge is ready!</strong><br>
+                                            Save this image to your phone or print it for the event.
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -67,25 +73,26 @@
         <!-- Instructions Card -->
         <div class="card mt-4">
             <div class="card-body">
-                <h5 class="card-title">📱 How to Use Your QR Badge</h5>
+                <h5 class="card-title">🎫 How to Use Your Conference Badge</h5>
                 <div class="instruction-grid">
                     <div class="instruction-item">
-                        <strong>Download:</strong> Save the badge image to your phone or computer
+                        <strong>Download:</strong> Click "Download Conference Badge" to save the complete badge to your device
                     </div>
                     <div class="instruction-item">
-                        <strong>Print Option:</strong> Print the badge if you prefer a physical copy
+                        <strong>Print Option:</strong> Print the full badge on standard paper - it includes all necessary details
                     </div>
                     <div class="instruction-item">
-                        <strong>Event Day:</strong> Show your badge (digital or printed) at the welcome desk
+                        <strong>Event Day:</strong> Show your complete badge (digital or printed) at the welcome desk
                     </div>
                     <div class="instruction-item">
-                        <strong>Quick Entry:</strong> Our team will scan your QR code for instant check-in
+                        <strong>Quick Entry:</strong> The QR code on your badge enables instant check-in at the event
                     </div>
                 </div>
                 
                 <div class="mt-3 p-3 bg-light rounded">
                     <small class="text-muted">
-                        <strong>Need Help?</strong> If you can't find your registration, please contact our support team or visit the registration desk at the event.
+                        <strong>📋 Badge Features:</strong> Your badge includes your name, contact details, profession, 
+                        and a QR code for quick check-in. The professional design represents the Kotak Conference branding.
                     </small>
                 </div>
             </div>
@@ -94,17 +101,77 @@
 </div>
 
 <style>
+.conference-badge {
+    transition: transform 0.3s ease;
+}
+
+.conference-badge:hover {
+    transform: scale(1.05);
+}
+
+.badge-container {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 2rem;
+    border-radius: var(--radius-xl);
+    margin: 1rem 0;
+}
+
 @media print {
-    .card-header, .btn, .instruction-grid, .navbar, .footer {
+    .card-header, .btn, .instruction-grid, .navbar, .footer, .card:not(.border-success) {
         display: none !important;
     }
-    .card {
+    .card.border-success {
         border: none !important;
         box-shadow: none !important;
     }
-    .qr-badge-container img {
-        max-width: 150px !important;
+    .conference-badge {
+        max-width: none !important;
+        width: 100% !important;
+        max-height: 90vh !important;
+    }
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .badge-container {
+        padding: 1rem;
+    }
+    .conference-badge {
+        max-width: 100% !important;
     }
 }
 </style>
+
+<script>
+function shareBadge() {
+    if (navigator.share) {
+        // Use Web Share API if available
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = document.querySelector('.conference-badge');
+        
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob(function(blob) {
+            const file = new File([blob], 'Kotak_Conference_Badge.png', { type: 'image/png' });
+            navigator.share({
+                title: 'My Kotak Conference Badge',
+                text: 'Check out my Kotak Conference badge!',
+                files: [file]
+            });
+        });
+    } else {
+        // Fallback: Copy link to clipboard
+        const badgeData = document.querySelector('.conference-badge').src;
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Badge link copied to clipboard! You can share it with others.');
+        });
+    }
+}
+</script>
 {% endblock %}
