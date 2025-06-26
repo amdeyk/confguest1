@@ -1,45 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Register - Kotak Conference{% endblock %}
 {% block content %}
-<h2 class="mb-4 text-center">Register as Guest</h2>
-{% if message %}
-    <div class="alert alert-info text-center">{{ message }}</div>
-{% endif %}
-<form method="post" action="/register" autocomplete="off">
-    <div class="mb-3">
-        <label for="name" class="form-label">Name*</label>
-        <input type="text" class="form-control" id="name" name="name" required maxlength="50">
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2 class="mb-2">Guest Registration</h2>
+                <p class="text-muted mb-0">Join us for the Kotak Conference</p>
+            </div>
+            <div class="card-body">
+                {% if message %}
+                    {% if "successful" in message %}
+                        <div class="alert alert-success text-center fade-in">
+                            <strong>✓ Success!</strong><br>
+                            {{ message }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger text-center fade-in">
+                            <strong>⚠ Error:</strong><br>
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endif %}
+                
+                <form method="post" action="/register" autocomplete="off" class="fade-in">
+                    <div class="mb-4">
+                        <label for="name" class="form-label">Full Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required maxlength="50" placeholder="Enter your full name">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="phone" class="form-label">Mobile Number *</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" required pattern="[0-9]{10}" placeholder="10-digit mobile number">
+                        <div class="form-text">This will be used for your QR badge</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="address" class="form-label">Address *</label>
+                        <input type="text" class="form-control" id="address" name="address" required maxlength="120" placeholder="Your address">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="profession" class="form-label">Profession</label>
+                        <input type="text" class="form-control" id="profession" name="profession" maxlength="50" placeholder="Your profession (optional)">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="notes" class="form-label">Special Requirements</label>
+                        <textarea class="form-control" id="notes" name="notes" maxlength="200" rows="3" placeholder="Any special requirements or notes (optional)"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-3">
+                        <span class="fw-bold">Register for Conference</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Instructions Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">📋 Registration Guide</h5>
+                <div class="instruction-grid">
+                    <div class="instruction-item">
+                        <strong>Step 1:</strong> Fill out all required fields accurately
+                    </div>
+                    <div class="instruction-item">
+                        <strong>Step 2:</strong> Ensure your mobile number is correct - it's used for your QR badge
+                    </div>
+                    <div class="instruction-item">
+                        <strong>Step 3:</strong> After registration, download your QR badge from the next page
+                    </div>
+                    <div class="instruction-item">
+                        <strong>Event Day:</strong> Bring your QR badge (digital or printed) for quick check-in
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label for="phone" class="form-label">Phone*</label>
-        <input type="tel" class="form-control" id="phone" name="phone" required pattern="[0-9]{10}">
-        <div class="form-text">Enter 10-digit mobile number</div>
-    </div>
-    <div class="mb-3">
-        <label for="address" class="form-label">Address*</label>
-        <input type="text" class="form-control" id="address" name="address" required maxlength="120">
-    </div>
-    <div class="mb-3">
-        <label for="profession" class="form-label">Profession</label>
-        <input type="text" class="form-control" id="profession" name="profession" maxlength="50">
-    </div>
-    <div class="mb-3">
-        <label for="notes" class="form-label">Notes</label>
-        <textarea class="form-control" id="notes" name="notes" maxlength="200"></textarea>
-    </div>
-    <button type="submit" class="btn btn-primary w-100">Register</button>
-</form>
-
-<!-- How to Use Block -->
-<div class="alert alert-info mt-5 mb-4 shadow-sm" style="max-width: 600px; margin-left: auto; margin-right: auto;">
-    <h5 class="mb-2"><i class="bi bi-person-plus-fill"></i> How to Use This Registration Page</h5>
-    <ul class="mb-1">
-        <li><b>For Volunteers:</b> Stand in front of the guest and fill out the form with their details. Always confirm the correct spelling of names and mobile number.</li>
-        <li>Make sure the <b>phone number</b> is a valid 10-digit mobile. This will be used for generating the QR badge.</li>
-        <li><b>Address</b> and <b>Profession</b> help us personalize the experience. “Notes” can be used for any special requirements or comments.</li>
-        <li>Once you click <b>Register</b>, the system generates a unique ID and QR badge for the guest, available on the next step.</li>
-        <li><b>For Self-Registration:</b> Guests may fill the form themselves if comfortable. Volunteers should be available for any help or questions.</li>
-    </ul>
-    <div class="small text-muted">Need help? Please call the event helpdesk or ask a coordinator nearby.</div>
 </div>
 {% endblock %}

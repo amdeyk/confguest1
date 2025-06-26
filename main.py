@@ -1,9 +1,9 @@
-import os
+import os 
 import csv
 import uuid
 import base64
 import logging
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, HTTPException, Depends, Cookie
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -39,6 +39,10 @@ CSV_PATH = os.path.join(DATA_DIR, "guests.csv")
 CSV_LOCK = os.path.join(DATA_DIR, "guests.csv.lock")
 CSV_FIELDS = ["id", "name", "phone", "address", "profession", "notes", "added", "created", "plus_one"]
 
+# Authentication
+ADMIN_PASSWORD = "admin123kotak"
+SESSION_COOKIE_NAME = "kotak_admin_session"
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s"
@@ -47,6 +51,18 @@ logging.basicConfig(
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# === Authentication Functions ===
+
+def check_admin_auth(kotak_admin_session: str = Cookie(None)):
+    """Check if user is authenticated as admin"""
+    if kotak_admin_session != "authenticated":
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return True
+
+def admin_required(kotak_admin_session: str = Cookie(None)):
+    """Dependency for admin-only routes"""
+    return check_admin_auth(kotak_admin_session)
 
 # === Utility Functions ===
 
@@ -123,7 +139,31 @@ def get_dashboard_stats(guests):
 def root(request: Request):
     return RedirectResponse("/register")
 
-# ---- 1. Registration ----
+# ---- Admin Login ----
+@app.get("/admin", response_class=HTMLResponse)
+def admin_login_form(request: Request):
+    return templates.TemplateResponse("admin_login.html", {"request": request, "error": None, "year": datetime.utcnow().year})
+
+@app.post("/admin", response_class=HTMLResponse)
+def admin_login_submit(request: Request, password: str = Form(...)):
+    if password == ADMIN_PASSWORD:
+        response = RedirectResponse("/admin/dashboard", status_code=302)
+        response.set_cookie(SESSION_COOKIE_NAME, "authenticated", httponly=True)
+        return response
+    else:
+        return templates.TemplateResponse("admin_login.html", {"request": request, "error": "Invalid password", "year": datetime.utcnow().year})
+
+@app.get("/admin/logout")
+def admin_logout():
+    response = RedirectResponse("/", status_code=302)
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return response
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+def admin_dashboard(request: Request, auth: bool = Depends(admin_required)):
+    return templates.TemplateResponse("admin_dashboard.html", {"request": request, "year": datetime.utcnow().year})
+
+# ---- 1. Registration (Public) ----
 @app.get("/register", response_class=HTMLResponse)
 def register_form(request: Request):
     return templates.TemplateResponse("register.html", {"request": request, "message": None, "year": datetime.utcnow().year})
@@ -165,7 +205,7 @@ def register_submit(
     log_with_uid(uid, f"SUCCESS Registration: {row}")
     return templates.TemplateResponse("register.html", {"request": request, "message": f"Registration successful! Your ID: {gid}", "year": datetime.utcnow().year})
 
-# ---- 2. Download QR Code ----
+# ---- 2. Download QR Code (Public) ----
 @app.get("/download_qr", response_class=HTMLResponse)
 def download_qr_form(request: Request):
     return templates.TemplateResponse("download_qr.html", {"request": request, "qr_image": None, "guest": None, "error": None, "year": datetime.utcnow().year})
@@ -181,13 +221,13 @@ def download_qr_submit(request: Request, identifier: str = Form(...)):
     log_with_uid(uid, f"SUCCESS QR Generated: id={g['id']}, phone={g['phone']}")
     return templates.TemplateResponse("download_qr.html", {"request": request, "qr_image": qr_image, "guest": g, "error": None, "year": datetime.utcnow().year})
 
-# ---- 3. Welcome Page (Check-In, Plus One button logic) ----
+# ---- 3. Welcome Page (Admin Protected) ----
 @app.get("/welcome", response_class=HTMLResponse)
-def welcome_form(request: Request):
+def welcome_form(request: Request, auth: bool = Depends(admin_required)):
     return templates.TemplateResponse("welcome.html", {"request": request, "guest": None, "error": None, "already_checked_in": False, "year": datetime.utcnow().year})
 
 @app.post("/welcome", response_class=HTMLResponse)
-def welcome_submit(request: Request, lookup: str = Form(...)):
+def welcome_submit(request: Request, lookup: str = Form(...), auth: bool = Depends(admin_required)):
     uid = str(uuid.uuid4())
     log_with_uid(uid, f"START Welcome Submit: lookup={lookup}")
     g = guest_lookup(lookup)
@@ -197,7 +237,6 @@ def welcome_submit(request: Request, lookup: str = Form(...)):
 
     if g["added"] == "yes":
         log_with_uid(uid, f"WELCOME: Already checked in: id={g['id']}, phone={g['phone']}")
-        # Show plus one button if eligible, don't set error
         return templates.TemplateResponse(
             "welcome.html",
             {
@@ -223,9 +262,9 @@ def welcome_submit(request: Request, lookup: str = Form(...)):
             }
         )
 
-# ---- 4. Add Plus One ----
+# ---- 4. Add Plus One (Admin Protected) ----
 @app.post("/add_plus_one", response_class=HTMLResponse)
-def add_plus_one(request: Request, lookup: str = Form(...)):
+def add_plus_one(request: Request, lookup: str = Form(...), auth: bool = Depends(admin_required)):
     uid = str(uuid.uuid4())
     log_with_uid(uid, f"START Add Plus One: lookup={lookup}")
     guests = lock_and_read()
@@ -250,15 +289,15 @@ def add_plus_one(request: Request, lookup: str = Form(...)):
         log_with_uid(uid, f"FAILED Plus One: Not eligible id/lookup={lookup}")
         return templates.TemplateResponse("welcome.html", {"request": request, "guest": None, "error": "Guest not found, not checked in, or plus one already added.", "already_checked_in": False, "year": datetime.utcnow().year})
 
-# ---- 5. Guest List / Dashboard ----
+# ---- 5. Guest List / Dashboard (Admin Protected) ----
 @app.get("/guest_list", response_class=HTMLResponse)
-def guest_list(request: Request):
+def guest_list(request: Request, auth: bool = Depends(admin_required)):
     guests = lock_and_read()
     stats = get_dashboard_stats(guests)
     return templates.TemplateResponse("guest_list.html", {"request": request, "guests": guests, "stats": stats, "year": datetime.utcnow().year})
 
 @app.get("/guest_list.csv")
-def guest_list_csv():
+def guest_list_csv(auth: bool = Depends(admin_required)):
     if not os.path.exists(CSV_PATH):
         return Response("No guests registered yet.", media_type="text/plain")
     backup_csv()
