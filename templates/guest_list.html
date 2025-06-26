@@ -1,64 +1,176 @@
 {% extends "base.html" %}
-{% block title %}Guests List - Kotak Conference{% endblock %}
+{% block title %}Guest Analytics - Kotak Conference{% endblock %}
 {% block content %}
-<h2>All Guests</h2>
-<div class="mb-3 d-flex flex-wrap align-items-center gap-2">
-    <span class="badge bg-info text-dark">Total: {{ stats.total }}</span>
-    <span class="badge bg-success">Checked In: {{ stats.checked_in }}</span>
-    <span class="badge bg-danger">Not Checked In: {{ stats.not_checked_in }}</span>
-    <span class="badge bg-warning text-dark">Plus Ones: {{ stats.plus_ones }}</span>
-    <a href="/guest_list.csv" class="btn btn-outline-primary btn-sm ms-auto">Download CSV</a>
-</div>
-<div class="table-responsive mb-4">
-    <table class="table table-bordered table-striped align-middle w-100" style="min-width: 700px;">
-        <thead class="table-light">
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Profession</th>
-                <th>Status</th>
-                <th>Plus One</th>
-                <th>Registered At</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for guest in guests %}
-            <tr>
-                <td>{{ guest.id }}</td>
-                <td>{{ guest.name }}</td>
-                <td>{{ guest.phone }}</td>
-                <td>{{ guest.profession or '' }}</td>
-                <td>
-                    {% if guest.added == "yes" %}
-                        <span class="badge bg-success badge-status">Checked In</span>
-                    {% else %}
-                        <span class="badge bg-secondary badge-status">Not Checked In</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if guest.plus_one == "yes" %}
-                        <span class="badge bg-warning text-dark">Added</span>
-                    {% else %}
-                        <span class="badge bg-secondary">No</span>
-                    {% endif %}
-                </td>
-                <td>{{ guest.created }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="admin-header-section">
+    <h2>📊 Guest Analytics & Management</h2>
+    <a href="/guest_list.csv" class="btn btn-outline-primary">
+        📥 Download Report
+    </a>
 </div>
 
-<!-- How to Use Block -->
-<div class="alert alert-info mt-5 mb-4 shadow-sm" style="max-width: 650px; margin-left: auto; margin-right: auto;">
-    <h5 class="mb-2"><i class="bi bi-info-circle-fill"></i> How to Use This Page</h5>
-    <ul class="mb-1">
-        <li><b>Check real-time status</b> of all registered guests, including who has checked in and who has added a plus one.</li>
-        <li>Click <b>Download CSV</b> for an Excel-friendly report of the current list at any time.</li>
-        <li>Green badge = Guest has checked in. Yellow badge = Plus One added.</li>
-        <li>Use the main menu to register new guests or scan for check-in at the Welcome page.</li>
-    </ul>
-    <div class="small text-muted">For help or issues, please contact the registration desk or your event coordinator.</div>
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-primary mb-2">{{ stats.total }}</div>
+                <div class="small text-muted">Total Registered</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-success mb-2">{{ stats.checked_in }}</div>
+                <div class="small text-muted">Checked In</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-danger mb-2">{{ stats.not_checked_in }}</div>
+                <div class="small text-muted">Pending</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-warning mb-2">{{ stats.plus_ones }}</div>
+                <div class="small text-muted">Plus Ones</div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Quick Stats Summary -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="progress mb-2" style="height: 8px;">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {% if stats.total > 0 %}{{ (stats.checked_in / stats.total * 100)|round(1) }}{% else %}0{% endif %}%">
+                    </div>
+                </div>
+                <small>Check-in Rate: {% if stats.total > 0 %}{{ (stats.checked_in / stats.total * 100)|round(1) }}%{% else %}0%{% endif %}</small>
+            </div>
+            <div class="col-md-4">
+                <div class="progress mb-2" style="height: 8px;">
+                    <div class="progress-bar bg-warning" role="progressbar" 
+                         style="width: {% if stats.checked_in > 0 %}{{ (stats.plus_ones / stats.checked_in * 100)|round(1) }}{% else %}0{% endif %}%">
+                    </div>
+                </div>
+                <small>Plus One Rate: {% if stats.checked_in > 0 %}{{ (stats.plus_ones / stats.checked_in * 100)|round(1) }}%{% else %}0%{% endif %}</small>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <strong>Total Attendees: {{ stats.checked_in + stats.plus_ones }}</strong>
+                    <div class="small text-muted">(including plus ones)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Guest List Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Registered Guests</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Guest Info</th>
+                        <th>Contact</th>
+                        <th>Profession</th>
+                        <th>Status</th>
+                        <th>Plus One</th>
+                        <th>Registered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for guest in guests %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ guest.name }}</div>
+                            <div class="small text-muted">ID: {{ guest.id }}</div>
+                        </td>
+                        <td>
+                            <div>📞 {{ guest.phone }}</div>
+                            {% if guest.address %}
+                                <div class="small text-muted">📍 {{ guest.address[:30] }}{% if guest.address|length > 30 %}...{% endif %}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if guest.profession %}
+                                <span class="badge bg-light text-dark">{{ guest.profession }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if guest.added == "yes" %}
+                                <span class="badge bg-success">✓ Checked In</span>
+                            {% else %}
+                                <span class="badge bg-secondary">⏳ Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if guest.plus_one == "yes" %}
+                                <span class="badge bg-warning text-dark">👥 Added</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small">{{ guest.created[:16] }}</div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="card-title">📋 Analytics Guide</h5>
+        <div class="instruction-grid">
+            <div class="instruction-item">
+                <strong>Real-time Updates:</strong> This page updates automatically when guests check in at the welcome desk
+            </div>
+            <div class="instruction-item">
+                <strong>Export Data:</strong> Click "Download Report" for an Excel-compatible CSV file with complete guest data
+            </div>
+            <div class="instruction-item">
+                <strong>Status Tracking:</strong> Green badges show checked-in guests, yellow badges show plus ones added
+            </div>
+            <div class="instruction-item">
+                <strong>Quick Access:</strong> Use this page during the event to monitor attendance and identify no-shows
+            </div>
+        </div>
+        
+        <div class="mt-3 p-3 bg-light rounded">
+            <small class="text-muted">
+                <strong>Need Help?</strong> This dashboard provides real-time insights into your event attendance. 
+                Export the data anytime for external analysis or reporting.
+            </small>
+        </div>
+    </div>
+</div>
+
+{% if guests|length == 0 %}
+<div class="text-center py-5">
+    <div class="mb-3" style="font-size: 4rem; opacity: 0.3;">📝</div>
+    <h4>No Guests Registered Yet</h4>
+    <p class="text-muted">Guest registrations will appear here once people start signing up.</p>
+    <a href="/register" class="btn btn-primary" target="_blank">Open Registration Page</a>
+</div>
+{% endif %}
 {% endblock %}

@@ -19,24 +19,39 @@
         </button>
         <div class="collapse navbar-collapse justify-content-end" id="navbarMain">
             <ul class="navbar-nav align-items-center mb-2 mb-lg-0 w-100 justify-content-end">
-                <li class="nav-item">
-                    <a class="nav-link{% if request.url.path == '/register' %} active{% endif %}" href="/register">Register</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link{% if request.url.path == '/download_qr' %} active{% endif %}" href="/download_qr">Download QR</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link{% if request.url.path == '/welcome' %} active{% endif %}" href="/welcome">Welcome</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link{% if request.url.path == '/guest_list' %} active{% endif %}" href="/guest_list">Guests List</a>
-                </li>
+                <!-- Check if we're in admin area -->
+                {% if request.url.path.startswith('/admin') or request.url.path in ['/welcome', '/guest_list'] %}
+                    <!-- Admin Navigation -->
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.url.path == '/admin/dashboard' %} active{% endif %}" href="/admin/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.url.path == '/welcome' %} active{% endif %}" href="/welcome">Welcome Desk</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.url.path == '/guest_list' %} active{% endif %}" href="/guest_list">Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/logout">Logout</a>
+                    </li>
+                {% else %}
+                    <!-- Public Navigation -->
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.url.path == '/register' %} active{% endif %}" href="/register">Register</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.url.path == '/download_qr' %} active{% endif %}" href="/download_qr">Download QR</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Organizer Login</a>
+                    </li>
+                {% endif %}
             </ul>
         </div>
     </div>
 </nav>
 
-<div class="container py-4">
+<div class="container py-4 fade-in">
     {% block content %}{% endblock %}
 </div>
 
@@ -48,4 +63,3 @@
 {% block script %}{% endblock %}
 </body>
 </html>
-
