@@ -8,21 +8,58 @@
     <button type="submit" class="btn btn-success w-100">Get QR Badge</button>
 </form>
 {% if qr_image and guest %}
-    <div class="card shadow-sm mx-auto" style="max-width:330px;">
-        <div class="card-header text-white bg-danger text-center py-2" style="font-size:1.15em;">
-            Welcome to the Kotak Conference
+    <!-- REMARK: START BADGE DESIGN, styled to match blue Kotak invite -->
+    <div class="kotak-badge" style="
+        max-width: 340px; margin: 38px auto 32px auto; 
+        background: #14296a; 
+        border-radius: 20px; 
+        box-shadow: 0 6px 28px rgba(18,35,80,0.18); 
+        color: #fff; 
+        padding: 32px 26px 20px 26px;
+        border: 2.2px solid #31417a;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        letter-spacing: 0.02em;
+    ">
+        <!-- REMARK: Header -->
+        <div style="font-size: 1.15rem; font-weight: 700; letter-spacing: 0.07em; color: #f8d7a4; text-align: center; margin-bottom: 10px;">
+            Kotak Solitaire Event
         </div>
-        <div class="card-body text-center">
-            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="img-fluid mb-3" style="max-width:150px;">
-            <div class="fw-bold fs-5">{{ guest.name }}</div>
-            <div class="text-muted small">ID: {{ guest.id }}</div>
-            <div class="text-muted small">Phone: {{ guest.phone }}</div>
-            <a href="data:image/png;base64,{{ qr_image }}" download="badge_{{ guest.id }}.png" class="btn btn-outline-primary mt-3 w-100">Download Badge</a>
+        <div style="font-size:1.08rem; text-align:center; color:#c6d7fa; margin-bottom: 6px; letter-spacing:0.04em;">
+            3rd August 2025<br>
+            ITC Grand Chola, Chennai<br>
+            7:00 PM onwards
         </div>
+        <div style="height: 1.5px; width: 90%; margin: 14px auto 18px auto; background: linear-gradient(90deg,#f8d7a4 10%, #213575 100%); border-radius:2px;"></div>
+        <!-- REMARK: QR Section -->
+        <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code"
+                 style="border-radius: 12px; border:2px solid #f8d7a4; background: #fff; padding:8px; width:140px; height:140px; box-shadow: 0 2px 10px rgba(0,0,0,0.10);">
+        </div>
+        <div style="text-align: center; font-size: 1.55rem; font-weight: 700; color:#f8d7a4; margin-top: 7px;">
+            {{ guest.name }}
+        </div>
+        <div style="text-align: center; color: #ffffff; font-size: 1.08rem; margin-top: 4px;">
+            {{ guest.phone }}
+        </div>
+        <div style="text-align: center; color: #c6d7fa; font-size: 0.95rem; margin-bottom: 4px;">
+            ID: {{ guest.id }}
+        </div>
+        <div style="height: 1.1px; width: 80%; margin: 12px auto 12px auto; background: #294da6; border-radius:1px;"></div>
+        <div style="text-align:center; color: #ffe0b2; font-size:1.02rem;">
+            Present this badge at entry
+        </div>
+        <a href="data:image/png;base64,{{ qr_image }}" 
+           download="badge_{{ guest.id }}.png" 
+           class="btn btn-outline-light mt-3 w-100" 
+           style="font-weight:600; border-radius:18px; border-width:2px;">
+            Download Badge
+        </a>
     </div>
+    <!-- REMARK: END BADGE DESIGN -->
 {% elif error %}
     <div class="alert alert-danger mt-3">{{ error }}</div>
 {% endif %}
+
 
 <!-- How to Use Block -->
 <div class="alert alert-info mt-5 mb-4 shadow-sm" style="max-width: 600px; margin-left: auto; margin-right: auto;">
