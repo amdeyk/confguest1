@@ -55,80 +55,16 @@
             Download Badge
         </a>
     </div>
-</div>
+    <!-- REMARK: END BADGE DESIGN -->
+{% elif error %}
+    <div class="alert alert-danger mt-3">{{ error }}</div>
+{% endif %}
 
 <style>
-.conference-badge {
-    transition: transform 0.3s ease;
-}
-
-.conference-badge:hover {
-    transform: scale(1.05);
-}
-
-.badge-container {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    padding: 2rem;
-    border-radius: var(--radius-xl);
-    margin: 1rem 0;
-}
-
-@media print {
-    .card-header, .btn, .instruction-grid, .navbar, .footer, .card:not(.border-success) {
-        display: none !important;
-    }
-    .card.border-success {
-        border: none !important;
-        box-shadow: none !important;
-    }
-    .conference-badge {
-        max-width: none !important;
-        width: 100% !important;
-        max-height: 90vh !important;
-    }
-    body {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .badge-container {
-        padding: 1rem;
-    }
-    .conference-badge {
-        max-width: 100% !important;
-    }
-}
+/* (Your print/media CSS can remain here or be cleaned up as needed) */
 </style>
 
 <script>
-function shareBadge() {
-    if (navigator.share) {
-        // Use Web Share API if available
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = document.querySelector('.conference-badge');
-        
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        
-        canvas.toBlob(function(blob) {
-            const file = new File([blob], 'Kotak_Conference_Badge.png', { type: 'image/png' });
-            navigator.share({
-                title: 'My Kotak Conference Badge',
-                text: 'Check out my Kotak Conference badge!',
-                files: [file]
-            });
-        });
-    } else {
-        // Fallback: Copy link to clipboard
-        const badgeData = document.querySelector('.conference-badge').src;
-        navigator.clipboard.writeText(window.location.href).then(() => {
-            alert('Badge link copied to clipboard! You can share it with others.');
-        });
-    }
-}
+/* (Your shareBadge JS can remain here if you want sharing features) */
 </script>
 {% endblock %}
