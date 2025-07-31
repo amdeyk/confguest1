@@ -1,4 +1,4 @@
-import os 
+import os
 import csv
 import uuid
 import base64
@@ -40,7 +40,6 @@ CSV_PATH = os.path.join(DATA_DIR, "guests.csv")
 CSV_LOCK = os.path.join(DATA_DIR, "guests.csv.lock")
 CSV_FIELDS = ["id", "name", "phone", "address", "profession", "notes", "added", "created", "plus_one"]
 
-# Authentication
 ADMIN_PASSWORD = "admin123kotak"
 SESSION_COOKIE_NAME = "kotak_admin_session"
 
@@ -57,12 +56,9 @@ templates = Jinja2Templates(directory="templates")
 
 def check_admin_auth(kotak_admin_session: str = Cookie(None)):
     """Check if user is authenticated as admin"""
-    if kotak_admin_session != "authenticated":
-        return False
-    return True
+    return kotak_admin_session == "authenticated"
 
 def admin_required(kotak_admin_session: str = Cookie(None)):
-    """Dependency for admin-only routes"""
     if not check_admin_auth(kotak_admin_session):
         raise HTTPException(status_code=403, detail="Admin authentication required")
     return True
@@ -109,161 +105,113 @@ def guest_lookup(id_or_phone):
             return g
     return None
 
-def qr_b64(data):
-    img = qrcode.make(data)
+# === REMARK: BLUE KOTAK BADGE GENERATOR ===
+def create_conference_badge(guest):
+    """
+    Generate a blue Kotak Solitaire event badge as PNG (base64).
+    All colors, text, layout, and event info can be changed at REMARK sections.
+    """
+    # === REMARK: BADGE DESIGN SETTINGS ===
+    WIDTH, HEIGHT = 400, 560
+    BG_COLOR = "#14296a"         # Main blue
+    GOLD = "#f8d7a4"             # Gold text
+    WHITE = "#ffffff"
+    PALE = "#c6d7fa"
+    YELLOW = "#ffe0b2"
+    BORDER_COLOR = "#31417a"
+    FOOTER = "#b1bbd4"
+    # === REMARK: Font paths (adjust as per your server OS)
+    FONT_PATH_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    # If running on Windows, may need: C:\\Windows\\Fonts\\Arial.ttf
+
+    img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
+    draw = ImageDraw.Draw(img)
+
+    # Fonts
+    def load_font(path, size):
+        try:
+            return ImageFont.truetype(path, size)
+        except:
+            return ImageFont.load_default()
+    f_title = load_font(FONT_PATH_BOLD, 22)
+    f_event = load_font(FONT_PATH, 15)
+    f_name = load_font(FONT_PATH_BOLD, 29)
+    f_info = load_font(FONT_PATH, 18)
+    f_id = load_font(FONT_PATH, 15)
+    f_small = load_font(FONT_PATH, 14)
+    f_present = load_font(FONT_PATH_BOLD, 16)
+
+    # Rounded border
+    radius = 30
+    draw.rounded_rectangle((0, 0, WIDTH-1, HEIGHT-1), radius, outline=BORDER_COLOR, width=3, fill=BG_COLOR)
+
+    # === REMARK: Event info section (edit here for event/title/venue/time) ===
+    y = 32
+    draw.text((WIDTH//2, y), "Kotak Solitaire Event", fill=GOLD, font=f_title, anchor="mm")
+    y += 36
+    for line in [
+        "3rd August 2025",
+        "ITC Grand Chola, Chennai",
+        "7:00 PM onwards"
+    ]:
+        draw.text((WIDTH//2, y), line, fill=PALE, font=f_event, anchor="mm")
+        y += 24
+
+    # Gold divider
+    y += 5
+    draw.line([(40, y), (WIDTH-40, y)], fill=GOLD, width=2)
+    y += 18
+
+    # QR code
+    qr = qrcode.QRCode(box_size=4, border=1)
+    qr.add_data(guest["id"])
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_size = 130
+    qr_img = qr_img.resize((qr_size, qr_size), Image.LANCZOS)
+    qr_x = (WIDTH - qr_size) // 2
+    img.paste(qr_img, (qr_x, y))
+
+    y_qr_end = y + qr_size
+    y = y_qr_end + 14
+
+    # Name
+    draw.text((WIDTH//2, y), guest["name"], fill=GOLD, font=f_name, anchor="mm")
+    y += 37
+
+    # Phone
+    draw.text((WIDTH//2, y), guest["phone"], fill=WHITE, font=f_info, anchor="mm")
+    y += 22
+
+    # ID
+    draw.text((WIDTH//2, y), f"ID: {guest['id']}", fill=PALE, font=f_id, anchor="mm")
+    y += 18
+
+    # Divider
+    draw.line([(70, y), (WIDTH-70, y)], fill=PALE, width=1)
+    y += 15
+
+    # Present at entry
+    draw.text((WIDTH//2, y), "Present this badge at entry", fill=YELLOW, font=f_present, anchor="mm")
+
+    # Footer
+    footer_y = HEIGHT - 36
+    draw.text((WIDTH//2, footer_y), "Kotak Conference 2025  •  Present at Registration", fill=FOOTER, font=f_small, anchor="mm")
+
+    # Save to base64
     buf = BytesIO()
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode("ascii")
-
-def create_conference_badge(guest_data):
-    """Create a beautiful, properly sized conference badge"""
-    # Badge dimensions - optimized for readability
-    width, height = 600, 850
-    
-    # Create new image with white background
-    img = Image.new('RGB', (width, height), 'white')
-    draw = ImageDraw.Draw(img)
-    
-    # Professional color scheme
-    kotak_green = (34, 197, 94)   # Main green
-    dark_text = (31, 41, 55)     # Dark text
-    medium_gray = (75, 85, 99)   # Medium gray
-    light_gray = (156, 163, 175) # Light gray
-    blue_accent = (59, 130, 246) # Blue accent
-    
-    # Load fonts with proper sizing - try multiple font paths
-    def get_font(size):
-        font_paths = [
-            "/System/Library/Fonts/Arial.ttf",  # macOS
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
-            "/usr/share/fonts/TTF/arial.ttf",  # Some Linux
-            "/Windows/Fonts/arial.ttf",  # Windows
-            "arial.ttf",  # Local
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Common Linux
-        ]
-        
-        for font_path in font_paths:
-            try:
-                return ImageFont.truetype(font_path, size)
-            except:
-                continue
-        
-        # If no TrueType font found, create a scaled default font
-        try:
-            # Try to load default font with size (PIL newer versions)
-            return ImageFont.load_default(size)
-        except:
-            # Fallback to basic default
-            return ImageFont.load_default()
-    
-    # Get fonts with different sizes
-    header_font = get_font(36)
-    name_font = get_font(56)
-    detail_font = get_font(28)
-    prof_font = get_font(24)
-    footer_font = get_font(20)
-    
-    # Header section - larger and more prominent
-    header_height = 100
-    draw.rectangle([0, 0, width, header_height], fill=kotak_green)
-    
-    # Helper function to draw large text even with small fonts
-    def draw_large_text(draw, position, text, font, fill, anchor='mm', scale_factor=1):
-        if scale_factor > 1 and hasattr(font, 'size') and font.size < 20:
-            # For small default fonts, draw multiple times with slight offsets for thickness
-            x, y = position
-            offsets = [(0, 0), (1, 0), (0, 1), (1, 1)] if scale_factor > 1.5 else [(0, 0)]
-            for dx, dy in offsets:
-                draw.text((x + dx, y + dy), text, font=font, fill=fill, anchor=anchor)
-        else:
-            draw.text(position, text, font=font, fill=fill, anchor=anchor)
-    
-    # Header text - bigger and clearer
-    draw_large_text(draw, (width//2, header_height//2), "🎫 KOTAK CONFERENCE BADGE", 
-                   header_font, 'white', 'mm', 2)
-    
-    # Content area starts after header
-    content_y = header_height + 60
-    
-    # QR Code - larger and more prominent
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=8,  # Larger QR code
-        border=3,
-    )
-    qr.add_data(guest_data['id'])
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Much larger QR code
-    qr_size = 220
-    qr_img = qr_img.resize((qr_size, qr_size))
-    
-    # Center QR code with nice border
-    qr_x = (width - qr_size) // 2
-    qr_y = content_y
-    
-    # Elegant border around QR
-    border_size = 15
-    draw.rectangle([qr_x - border_size, qr_y - border_size, 
-                   qr_x + qr_size + border_size, qr_y + qr_size + border_size], 
-                   fill=(248, 250, 252), outline=(229, 231, 235), width=3)
-    
-    img.paste(qr_img, (qr_x, qr_y))
-    
-    # Guest name - much larger and more prominent
-    name_y = qr_y + qr_size + 60
-    draw_large_text(draw, (width//2, name_y), guest_data['name'], 
-                   name_font, kotak_green, 'mt', 2)
-    
-    # Guest details with better spacing
-    details_y = name_y + 80
-    
-    # ID with better formatting
-    draw_large_text(draw, (width//2, details_y), f"ID: {guest_data['id']}", 
-                   detail_font, medium_gray, 'mt', 1.5)
-    
-    # Phone with better spacing
-    draw_large_text(draw, (width//2, details_y + 45), f"Phone: {guest_data['phone']}", 
-                   detail_font, medium_gray, 'mt', 1.5)
-    
-    # Profession badge - bigger and more readable
-    if guest_data.get('profession') and guest_data['profession'].strip():
-        prof_y = details_y + 110
-        prof_text = guest_data['profession']
-        
-        # Larger profession badge
-        prof_bbox = draw.textbbox((0, 0), prof_text, font=prof_font)
-        prof_width = prof_bbox[2] - prof_bbox[0] + 40
-        prof_height = prof_bbox[3] - prof_bbox[1] + 20
-        prof_x = (width - prof_width) // 2
-        
-        # Nice rounded badge
-        draw.rounded_rectangle([prof_x, prof_y, prof_x + prof_width, prof_y + prof_height], 
-                             radius=prof_height//2, fill=blue_accent)
-        
-        draw_large_text(draw, (width//2, prof_y + prof_height//2), prof_text, 
-                        prof_font, 'white', 'mm', 1.5)
-    
-    # Footer with proper spacing
-    footer_y = height - 50
-    draw_large_text(draw, (width//2, footer_y), "Kotak Conference 2025 • Present at Registration", 
-                   footer_font, light_gray, 'mm', 1)
-    
-    # Convert to base64
-    buf = BytesIO()
-    img.save(buf, format='PNG', quality=95, optimize=True)
-    return base64.b64encode(buf.getvalue()).decode('ascii')
 
 def mark_checked_in(id_or_phone):
     guests = lock_and_read()
     changed = False
     guest_found = None
     for g in guests:
-        if g['id'] == id_or_phone or g['phone'] == id_or_phone:
-            if g['added'] != 'yes':
-                g['added'] = 'yes'
+        if g["id"] == id_or_phone or g["phone"] == id_or_phone:
+            if g["added"] != "yes":
+                g["added"] = "yes"
                 changed = True
             guest_found = g
     if changed:
@@ -272,9 +220,9 @@ def mark_checked_in(id_or_phone):
 
 def get_dashboard_stats(guests):
     total = len(guests)
-    checked_in = sum(1 for g in guests if g['added'] == 'yes')
+    checked_in = sum(1 for g in guests if g["added"] == "yes")
     not_checked_in = total - checked_in
-    plus_ones = sum(1 for g in guests if g.get('plus_one') == 'yes')
+    plus_ones = sum(1 for g in guests if g.get("plus_one") == "yes")
     return dict(total=total, checked_in=checked_in, not_checked_in=not_checked_in, plus_ones=plus_ones)
 
 # === ROUTES ===
@@ -283,7 +231,6 @@ def get_dashboard_stats(guests):
 def root(request: Request):
     return RedirectResponse('/register')
 
-# ---- Admin Login ----
 @app.get('/admin', response_class=HTMLResponse)
 def admin_login_form(request: Request):
     return templates.TemplateResponse('admin_login.html', {'request': request, 'error': None, 'year': datetime.now().year})
@@ -307,7 +254,6 @@ def admin_logout():
 def admin_dashboard(request: Request, auth: bool = Depends(admin_required)):
     return templates.TemplateResponse('admin_dashboard.html', {'request': request, 'year': datetime.now().year})
 
-# ---- 1. Registration (Public) ----
 @app.get('/register', response_class=HTMLResponse)
 def register_form(request: Request):
     return templates.TemplateResponse('register.html', {'request': request, 'message': None, 'year': datetime.now().year})
@@ -349,7 +295,6 @@ def register_submit(
     log_with_uid(uid, f"SUCCESS Registration: {row}")
     return templates.TemplateResponse('register.html', {'request': request, 'message': f'Registration successful! Your ID: {gid}', 'year': datetime.now().year})
 
-# ---- 2. Download QR Code (Public) ----
 @app.get('/download_qr', response_class=HTMLResponse)
 def download_qr_form(request: Request):
     return templates.TemplateResponse('download_qr.html', {'request': request, 'qr_image': None, 'guest': None, 'error': None, 'year': datetime.now().year})
@@ -365,7 +310,10 @@ def download_qr_submit(request: Request, identifier: str = Form(...)):
     log_with_uid(uid, f"SUCCESS QR Generated: id={g['id']}, phone={g['phone']}")
     return templates.TemplateResponse('download_qr.html', {'request': request, 'qr_image': qr_image, 'guest': g, 'error': None, 'year': datetime.now().year})
 
-# ---- 3. Welcome Page (Admin Protected) ----
+# ... rest of your code (welcome, add_plus_one, guest_list, CSV, etc. remain unchanged)
+# (copy from your last version if you have additional custom endpoints!)
+# The critical part above is the new badge generator and its use in download_qr.
+
 @app.get('/welcome')
 def welcome_form(request: Request, kotak_admin_session: str = Cookie(None)):
     try:
@@ -437,7 +385,6 @@ def welcome_submit(request: Request, lookup: str = Form(...), kotak_admin_sessio
         logging.error(f'Error in welcome_submit: {e}')
         return RedirectResponse('/admin')
 
-# ---- 4. Add Plus One (Admin Protected) ----
 @app.post('/add_plus_one')
 def add_plus_one(request: Request, lookup: str = Form(...), kotak_admin_session: str = Cookie(None)):
     try:
@@ -489,7 +436,6 @@ def add_plus_one(request: Request, lookup: str = Form(...), kotak_admin_session:
         logging.error(f'Error in add_plus_one: {e}')
         return RedirectResponse('/admin')
 
-# ---- 5. Guest List / Dashboard (Admin Protected) ----
 @app.get('/guest_list')
 def guest_list(request: Request, kotak_admin_session: str = Cookie(None)):
     try:
@@ -525,7 +471,6 @@ def guest_list_csv(kotak_admin_session: str = Cookie(None)):
         logging.error(f'Error in guest_list_csv: {e}')
         raise HTTPException(status_code=500, detail='Internal server error')
 
-# ---- 6. Serve QR as Image (optional) ----
 @app.get('/qr/{gid}')
 def qr_direct(gid: str):
     try:
@@ -538,7 +483,6 @@ def qr_direct(gid: str):
         logging.error(f'Error in qr_direct: {e}')
         raise HTTPException(status_code=500, detail='Error generating QR code')
 
-# Custom exception handler for 403 errors
 @app.exception_handler(403)
 async def forbidden_exception_handler(request: Request, exc: HTTPException):
     return RedirectResponse('/admin')
