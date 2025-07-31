@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - Kotak Conference{% endblock %}
+{% block content %}
+<div class="admin-header-section">
+    <h2>Event Management Dashboard</h2>
+    <a href="/admin/logout" class="btn btn-outline-danger btn-sm logout-btn">Logout</a>
+</div>
+
+<div class="dashboard-grid">
+    <div class="dashboard-card">
+        <div class="card-icon">👥</div>
+        <h3>Welcome Desk</h3>
+        <p>Check-in guests and manage plus ones</p>
+        <a href="/welcome" class="btn btn-primary dashboard-btn">Open Welcome</a>
+    </div>
+    
+    <div class="dashboard-card">
+        <div class="card-icon">📊</div>
+        <h3>Guest Analytics</h3>
+        <p>View all registered guests and statistics</p>
+        <a href="/guest_list" class="btn btn-success dashboard-btn">View Analytics</a>
+    </div>
+    
+    <div class="dashboard-card public-card">
+        <div class="card-icon">📝</div>
+        <h3>Registration</h3>
+        <p>Public guest registration page</p>
+        <a href="/register" class="btn btn-outline-primary dashboard-btn" target="_blank">Open Registration</a>
+    </div>
+    
+    <div class="dashboard-card public-card">
+        <div class="card-icon">📱</div>
+        <h3>QR Download</h3>
+        <p>Public QR badge download page</p>
+        <a href="/download_qr" class="btn btn-outline-success dashboard-btn" target="_blank">Open QR Download</a>
+    </div>
+</div>
+
+<div class="admin-info">
+    <h4>Quick Instructions</h4>
+    <div class="instruction-grid">
+        <div class="instruction-item">
+            <strong>Welcome Desk:</strong> Use this on event day for real-time check-ins and guest management
+        </div>
+        <div class="instruction-item">
+            <strong>Guest Analytics:</strong> Monitor registration status, check-ins, and download reports
+        </div>
+        <div class="instruction-item">
+            <strong>Public Pages:</strong> Share registration and QR download links with guests
+        </div>
+    </div>
+</div>
+{% endblock %}

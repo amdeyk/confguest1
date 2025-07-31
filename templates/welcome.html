@@ -1,84 +1,173 @@
 {% extends "base.html" %}
-{% block title %}Welcome - Kotak Conference{% endblock %}
+{% block title %}Welcome Desk - Kotak Conference{% endblock %}
 
 {% block head %}
 <script src="/static/html5-qrcode.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<h2 class="text-center mb-3">Welcome to the Conference</h2>
-<form method="post" action="/welcome" id="welcome-form" autocomplete="off">
-    <div class="mb-3">
-        <label for="lookup" class="form-label">Enter Phone, Guest ID, or Scan QR</label>
-        <input type="text" class="form-control" id="lookup" name="lookup" required autofocus>
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2 class="mb-2">🎉 Welcome to Kotak Conference</h2>
+                <p class="text-muted mb-0">Event Day Check-In</p>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/welcome" id="welcome-form" autocomplete="off">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="lookup" class="form-label">Phone Number, Guest ID, or Scan QR</label>
+                            <input type="text" class="form-control" id="lookup" name="lookup" required autofocus placeholder="Enter phone/ID or scan QR code">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary flex-fill">Check In</button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-success" id="scan-btn">
+                            📸 Scan QR Code
+                        </button>
+                    </div>
+                </form>
+
+                <!-- QR Scanner Area -->
+                <div id="qr-reader" style="display:none;" class="mt-3"></div>
+                
+                {% if guest %}
+                    <div class="alert alert-success mt-4 text-center fade-in">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h4 class="mb-2">🎊 Welcome, {{ guest.name }}!</h4>
+                                {% if guest.profession %}
+                                    <div class="mb-2">
+                                        <span class="badge bg-info text-dark">{{ guest.profession }}</span>
+                                    </div>
+                                {% endif %}
+                                <div class="small text-muted">
+                                    ID: {{ guest.id }} | Phone: {{ guest.phone }}
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <span class="badge bg-success fs-6 px-3 py-2">✓ Checked In Successfully</span>
+                                </div>
+                                
+                                {% if already_checked_in %}
+                                    <div class="mt-2 small text-info">
+                                        Previously checked in - Welcome back!
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                {% if guest.plus_one == "no" %}
+                                    <button type="button" class="btn btn-warning" onclick="showPlusOneModal()">
+                                        👥 Add Plus One
+                                    </button>
+                                {% else %}
+                                    <div class="text-center">
+                                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Plus One Added</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% elif error %}
+                    <div class="alert alert-danger mt-4 text-center fade-in">
+                        <strong>⚠ {{ error }}</strong>
+                        <div class="mt-2 small">Please verify the phone number or guest ID and try again.</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Stats Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">📊 Quick Actions</h5>
+                <div class="row text-center">
+                    <div class="col-6 col-md-3 mb-3">
+                        <a href="/guest_list" class="btn btn-outline-primary w-100">
+                            <div class="small">View</div>
+                            <strong>Analytics</strong>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <a href="/register" class="btn btn-outline-success w-100" target="_blank">
+                            <div class="small">New</div>
+                            <strong>Registration</strong>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <button class="btn btn-outline-info w-100" onclick="showScanHelp()">
+                            <div class="small">Scan</div>
+                            <strong>Help</strong>
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <button class="btn btn-outline-secondary w-100" onclick="document.getElementById('lookup').value=''; document.getElementById('lookup').focus();">
+                            <div class="small">Clear &</div>
+                            <strong>Reset</strong>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <button type="submit" class="btn btn-primary w-100 mb-2">Enter</button>
-    <button type="button" class="btn btn-success w-100 mb-2" id="scan-btn" type="button">Scan QR Code</button>
-</form>
+</div>
 
-<!-- QR Scanner Area (hidden by default) -->
-<div id="qr-reader" style="width:320px;max-width:100%;margin:auto;display:none;"></div>
-
-<!-- Instructions Modal -->
+<!-- Scan Help Modal -->
 <div class="modal fade" id="scanHelpModal" tabindex="-1" aria-labelledby="scanHelpLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="scanHelpLabel">How to Scan QR Code</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <ul>
-          <li>Tap <b>Scan QR Code</b> and allow camera access when prompted.</li>
-          <li>Point your camera steadily at the badge QR code.</li>
-          <li>On successful scan, your entry will be auto-checked-in instantly.</li>
-          <li>Each guest can enter once. To add a <b>Plus One</b>, see the option after check-in.</li>
-        </ul>
-      </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="scanHelpLabel">📸 QR Code Scanner Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="instruction-grid">
+                    <div class="instruction-item">
+                        <strong>Step 1:</strong> Click "Scan QR Code" button above
+                    </div>
+                    <div class="instruction-item">
+                        <strong>Step 2:</strong> Allow camera access when prompted by your browser
+                    </div>
+                    <div class="instruction-item">
+                        <strong>Step 3:</strong> Point camera steadily at guest's QR badge
+                    </div>
+                    <div class="instruction-item">
+                        <strong>Step 4:</strong> Scanner will automatically check them in when detected
+                    </div>
+                </div>
+                <div class="mt-3 p-3 bg-light rounded">
+                    <small><strong>Tip:</strong> Ensure good lighting and hold the badge steady for best results.</small>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<!-- Plus One Modal (shows after check-in, optional) -->
+<!-- Plus One Modal -->
 <div class="modal fade" id="plusOneModal" tabindex="-1" aria-labelledby="plusOneModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="plusOneModalLabel">Add Plus One</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center">
-        <form method="post" action="/add_plus_one">
-            <input type="hidden" name="lookup" value="{{ guest.id if guest }}">
-            <button type="submit" class="btn btn-warning">Confirm Add Plus One</button>
-        </form>
-      </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="plusOneModalLabel">👥 Add Plus One</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>Would you like to add a plus one for <strong>{{ guest.name if guest else '' }}</strong>?</p>
+                <form method="post" action="/add_plus_one">
+                    <input type="hidden" name="lookup" value="{{ guest.id if guest }}">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">✓ Confirm Add Plus One</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
-
-{% if guest %}
-    <div class="alert alert-success mt-3 text-center">
-        <b>Welcome, {{ guest.name }}!</b><br>
-        Profession: {{ guest.profession or 'N/A' }}<br>
-        ID: {{ guest.id }}<br>
-        <span class="badge bg-success mt-2">Checked In</span>
-        {% if already_checked_in %}
-            <div class="text-info mt-2">Already checked in!</div>
-        {% endif %}
-        {% if guest.plus_one == "no" %}
-            <!-- Show Plus One button as inline or modal trigger -->
-            <button type="button" class="btn btn-warning mt-3" onclick="showPlusOneModal();">Add Plus One</button>
-        {% else %}
-            <div class="text-info mt-2">Plus One Already Added</div>
-        {% endif %}
-    </div>
-{% elif error %}
-    <div class="alert alert-danger mt-3 text-center">{{ error }}</div>
-{% endif %}
-
-<div class="text-center mt-4">
-    <a href="#" id="scan-help-link" class="small text-decoration-underline">How to use QR Scan?</a>
 </div>
 {% endblock %}
 
@@ -88,43 +177,90 @@ function showScanHelp() {
     var modal = new bootstrap.Modal(document.getElementById('scanHelpModal'));
     modal.show();
 }
+
 function showPlusOneModal() {
     var modal = new bootstrap.Modal(document.getElementById('plusOneModal'));
     modal.show();
 }
+
 document.addEventListener("DOMContentLoaded", function() {
-    document.getElementById("scan-help-link").onclick = function(e) {
-        e.preventDefault();
-        showScanHelp();
-    };
     let qrReaderObj = null;
+    let isScanning = false;
+    
     document.getElementById('scan-btn').onclick = function() {
-        document.getElementById('qr-reader').style.display = '';
-        if (qrReaderObj) {
-            qrReaderObj.stop().then(() => startQrScanner());
+        if (isScanning) {
+            stopScanner();
         } else {
-            startQrScanner();
+            startScanner();
         }
     };
-    function startQrScanner() {
+    
+    function startScanner() {
+        document.getElementById('qr-reader').style.display = 'block';
+        document.getElementById('scan-btn').textContent = '⏹️ Stop Scanning';
+        document.getElementById('scan-btn').classList.remove('btn-success');
+        document.getElementById('scan-btn').classList.add('btn-danger');
+        isScanning = true;
+        
         qrReaderObj = new Html5Qrcode("qr-reader");
         qrReaderObj.start(
             { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
             qrCodeMessage => {
                 document.getElementById('lookup').value = qrCodeMessage;
-                qrReaderObj.stop().then(() => {
-                    document.getElementById('qr-reader').style.display = 'none';
-                    document.getElementById('welcome-form').submit();
-                });
+                stopScanner();
+                document.getElementById('welcome-form').submit();
             },
-            errorMessage => {}
-        );
+            errorMessage => {
+                // Ignore scan errors - they're frequent and normal
+            }
+        ).catch(err => {
+            console.error("Scanner error:", err);
+            alert("Camera access denied or not available. Please check permissions.");
+            stopScanner();
+        });
     }
-    // Optionally show the plus one modal automatically after check-in:
-    {% if guest and guest.plus_one == "no" and not error %}
-        showPlusOneModal();
+    
+    function stopScanner() {
+        if (qrReaderObj) {
+            qrReaderObj.stop().then(() => {
+                qrReaderObj.clear();
+                qrReaderObj = null;
+            }).catch(err => {
+                console.error("Error stopping scanner:", err);
+            });
+        }
+        document.getElementById('qr-reader').style.display = 'none';
+        document.getElementById('scan-btn').textContent = '📸 Scan QR Code';
+        document.getElementById('scan-btn').classList.remove('btn-danger');
+        document.getElementById('scan-btn').classList.add('btn-success');
+        isScanning = false;
+    }
+    
+    // Auto-show plus one modal if applicable
+    {% if guest and guest.plus_one == "no" and not error and not already_checked_in %}
+        setTimeout(() => {
+            showPlusOneModal();
+        }, 1500);
     {% endif %}
+    
+    // Auto-focus on input when page loads
+    document.getElementById('lookup').focus();
+    
+    // Clear input on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('lookup').value = '';
+            document.getElementById('lookup').focus();
+            if (isScanning) {
+                stopScanner();
+            }
+        }
+    });
 });
 </script>
 {% endblock %}
